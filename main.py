@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
 
+
 load_dotenv()
 
 def main():
@@ -19,6 +20,7 @@ Born into a wealthy family in Pretoria, South Africa, Musk emigrated in 1989 to 
     summary_prompt_template = ChatPromptTemplate.from_template(summary_template)  # ✅ fix 1
 
     llm = ChatOllama(model="gemma3:270m")  # ✅ fix 2
+    
     chain = summary_prompt_template | llm
     response = chain.invoke({"information": information})
     print(response.content)
