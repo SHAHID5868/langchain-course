@@ -5,9 +5,13 @@ from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain.tools import tool
 from langchain_ollama import ChatOllama
 from langchain_tavily import TavilySearch
-
+from typing import List
+from pydantic import BaseModel, Field
 
 load_dotenv()
+
+ 
+
 
 tools = [TavilySearch()]
 llm = ChatOllama(model="qwen2.5:3b ",model_provider="ollama")

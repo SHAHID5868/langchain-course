@@ -5,6 +5,8 @@ from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain.tools import tool
 from langchain_ollama import ChatOllama
 from tavily import TavilyClient
+from typing import List
+from pydantic import BaseModel, Field
 
 tavily = TavilyClient()
 

@@ -1,31 +1,27 @@
-from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from dotenv import load_dotenv
-from langgraph.prebuilt import create_react_agent, tools_condition
 from langchain.tools import tool
-
+from langchain_ollama import ChatOllama
+from langgraph.prebuilt import create_react_agent
+from ollama import Tool
+from langchain_tavily import TavilySearch
+from urllib3 import response
+from langchain_core.messages import HumanMessage,SystemMessage
 
 load_dotenv()
 
-@tool
-def search(query: str) -> str:
-    """Search the web for given query and return the results.
-    Args:
-        query: The query to search for
-    Returns:
-        The search result
-    """
-    print(f"Searching the web for {query}")
-    return "Tokyo is sunny today"
-    
 
-tools = [search]
-llm = ChatOllama(model="qwen2.5:3b",model_provider="ollama")
-agent = create_react_agent(tools=tools, model=llm)
+
+tools = [TavilySearch()]
+llm = ChatOllama(model="qwen2.5:3b")
+agent = create_react_agent(tools=tools, model=llm, prompt=SystemMessage(content="You must always use the search tool to answer questions. Never answer from your own knowledge. Always search first."))
 
 def main():
-    response = agent.invoke({"messages":[HumanMessage(content="What is the weather in Tokyo")]})
-    print(response["messages"][-1].content)
+    print("Hello")
+    response = agent.invoke( {"messages": [HumanMessage(content="What is the weather in Tokyo?")]}) 
+    for message in response["messages"]:
+        print(type(message).__name__, ":", message.content)
+
+
 
 if __name__ == "__main__":
     main()
