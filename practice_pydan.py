@@ -29,7 +29,7 @@ class User(BaseModel):
             raise ValueError("Username must be alphanumeric (underscores allowed)")
         return v.lower()
     
-    @field_validator("website")
+    @field_validator("website",mode="before")
     @classmethod
     def add_https(cls, v: str | None) -> str | None:
         if  v and not v.startswith(("http://", "https://")):
