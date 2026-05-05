@@ -23,7 +23,7 @@ vectorstore = PineconeVectorStore(
 )
 
 retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
-# k=3 means fetch the 3 most relevant documents from Pinecone
+# k: 3 means fetch the 3 most relevant documents from Pinecone
 
 
 # ── 2. Tool ───────────────────────────────────────────────────
@@ -77,60 +77,60 @@ rag_chain = (
 
 
 # ── 6. Agent Loop ─────────────────────────────────────────────
-def run_rag_agent(question: str):
-    tools_dict = {"apply_discount": apply_discount}
+# def run_rag_agent(question: str):
+#     tools_dict = {"apply_discount": apply_discount}
 
-    print(f"\nQuestion: {question}")
-    print("=" * 60)
+#     print(f"\nQuestion: {question}")
+#     print("=" * 60)
 
-    messages = [
-        SystemMessage(content=(
-            "You are a helpful shopping assistant. "
-            "Use the provided context to find prices. "
-            "Use the apply_discount tool to calculate discounts. "
-            "NEVER calculate discounts yourself."
-        )),
-        HumanMessage(content=question)
-    ]
+#     messages = [
+#         SystemMessage(content=(
+#             "You are a helpful shopping assistant. "
+#             "Use the provided context to find prices. "
+#             "Use the apply_discount tool to calculate discounts. "
+#             "NEVER calculate discounts yourself."
+#         )),
+#         HumanMessage(content=question)
+#     ]
 
-    for iteration in range(1, 11):
-        print(f"\n--- Iteration {iteration} ---")
+#     for iteration in range(1, 11):
+#         print(f"\n--- Iteration {iteration} ---")
 
-        # first retrieve context from Pinecone then call LLM
-        ai_message = llm_with_tools.invoke(
-            messages,
-            # inject retrieved context into the system
-            config={"configurable": {"context": (
-                retriever | format_docs
-            ).invoke(question)}}
-        )
+#         # first retrieve context from Pinecone then call LLM
+#         ai_message = llm_with_tools.invoke(
+#             messages,
+#             # inject retrieved context into the system
+#             config={"configurable": {"context": (
+#                 retriever | format_docs
+#             ).invoke(question)}}
+#         )
 
-        tool_calls = ai_message.tool_calls
+#         tool_calls = ai_message.tool_calls
 
-        # no tool calls means LLM has final answer
-        if not tool_calls:
-            print(f"\nFinal Answer: {ai_message.content}")
-            return ai_message.content
+#         # no tool calls means LLM has final answer
+#         if not tool_calls:
+#             print(f"\nFinal Answer: {ai_message.content}")
+#             return ai_message.content
 
-        # process tool call
-        tool_call = tool_calls[0]
-        tool_name = tool_call.get("name")
-        tool_args = tool_call.get("args", {})
-        tool_call_id = tool_call.get("id")
-        print(f"  [Tool Selected] {tool_name} with args {tool_args}")
+#         # process tool call
+#         tool_call = tool_calls[0]
+#         tool_name = tool_call.get("name")
+#         tool_args = tool_call.get("args", {})
+#         tool_call_id = tool_call.get("id")
+#         print(f"  [Tool Selected] {tool_name} with args {tool_args}")
 
-        tool_to_use = tools_dict.get(tool_name)
-        if tool_to_use is None:
-            raise ValueError(f"Tool {tool_name} not found")
+#         tool_to_use = tools_dict.get(tool_name)
+#         if tool_to_use is None:
+#             raise ValueError(f"Tool {tool_name} not found")
 
-        observation = tool_to_use.invoke(tool_args)
-        print(f"  [Tool Result] ${observation}")
+#         observation = tool_to_use.invoke(tool_args)
+#         print(f"  [Tool Result] ${observation}")
 
-        messages.append(ai_message)
-        messages.append(ToolMessage(
-            content=str(observation),
-            tool_call_id=tool_call_id
-        ))
+#         messages.append(ai_message)
+#         messages.append(ToolMessage(
+#             content=str(observation),
+#             tool_call_id=tool_call_id
+#         ))
 
 
 # ── 7. Cleaner approach — RAG chain feeds the agent ───────────
