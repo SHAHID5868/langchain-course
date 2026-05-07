@@ -1,83 +1,66 @@
-from pyexpat.errors import messages
-from langchain.chat_models import init_chat_model
+from json import load
+import os
+from langgraph.graph import END
+from dotenv import load_dotenv
 from langchain.tools import tool
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
-from langchain_groq import ChatGroq
+from langchain.chat_models import init_chat_model
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_tavily import TavilySearch
+from langgraph.graph import StateGraph, MessagesState
+from langgraph.prebuilt import ToolNode
+from nodes import SYSTEM_MESSAGE, tool_node
+from react import tools, llm
 
-MAX_ITERATIONS = 10
-MODEL = "llama-3.3-70b-versatile"
 
-@tool
-def get_product_price(product: str) -> float:
-    """Look for the product and return the price"""
-    print(f" >> Executing the get_product_price for {product}")
-    price = {"laptop": 1299.99, "headphones": 149.55, "keyboard": 89.50}
-
-    return price.get(product, 0)
+load_dotenv()
 
 @tool
-def apply_discount(price: float, discount_tier: str) -> float:
-    """Apply discount tier to a price and return the final price
-       Available tiers: bronze, silver, gold."""
+def triple(num: float) -> float:
+    """Schema for tripling the number received and return result"""
+    return float(num * 3)
 
-    print(f" >> Executing apply_discount to calculate the final price")
-    discount_percentage={"bronze": 5, "silver": 12, "gold": 23} 
-    discount = discount_percentage.get(discount_tier, 0)
 
-    return round(price*(1- discount/100), 2)
+tools= [TavilySearch(max_results=2,search_depth="basic"),triple]
 
-def run_agent(question: str):
-    Tools = [get_product_price, apply_discount]
-    tool_dict = {t.name: t for t in Tools}
-    llm = init_chat_model(temperature=0, model_provider="groq", model=MODEL)
-    llm_with_tool = llm.bind_tools(Tools)
+llm = init_chat_model(model="llama-3.3-70b-versatile", model_provider="groq", temperature=0).bind_tools(tools=tools)
 
-    print(f"Question: {question}")
-    print("=" *60)
-    messages = [
-        SystemMessage(content=("You are a helpful shopping assitant."
-                              "You have access to a product catalog tool"
-                              "and a discount tool.\n\n"
-                              "STRICT RULES - you must follow these exactly:\n"
-                              "1. Never guess or assume any product price."
-                              " You MUST call get_product_price first to get the real price"
-                              " 2. Ony call apply_discount AFTER you have received"
-                              " a price from get_product_price. Pass the price "
-                              " returned by get_product_price - do NOT pass a made-up number.\n"
-                              "3.NEVER calculate discounts yourself using math"
-                              " Always use the apply_discount tool.\n"
-                              "4. If the user does not specify a discount tier"
-                              " ask them which tier to use -do NOT assume one")
-        ),
-        HumanMessage(content=question)
-    ]
 
-    for iteration in range(1, MAX_ITERATIONS+1):
-        print(f"\n--- iteration {iteration} ---")
-        ai_message= llm_with_tool.invoke(messages)
-        tool_calls = ai_message.tool_calls
-        if not tool_calls:
-            print(f"\n final answer:{ai_message.content}")
-            return ai_message.content
-        
-        tool_call = tool_calls[0]
-        tool_name = tool_call.get("name")
-        tool_args = tool_call.get("args", {})
-        tool_call_id = tool_call.get("id")
-        print(f"  [Tool Selected] {tool_name} with args {tool_args}")
+SYSTEM_MESSAGE = """
+You are a helpful assistant that can use tools to answer questions.
+"""
 
-        tool_to_use = tool_dict.get(tool_name)
-        if tool_to_use is None:
-            raise ValueError(f"Tool {tool_name} not found")
+def run_agent_node(state: MessagesState):
+    """Schema for passing the ruuning the node"""
+    response = llm.invoke([SystemMessage(content=SYSTEM_MESSAGE), *state["messages"]])
 
-        observation = tool_to_use.invoke(tool_args)
+    return {"messages": [response]}
 
-        print(f"  [Tool Result] {observation}")
+tool_node = ToolNode(tools)
 
-        messages.append(ai_message)
-        messages.append(ToolMessage(content=str(observation), tool_call_id=tool_call_id))
+AGENT_REASON = "agent_reason"
+ACT = "act"
+LAST = -1
 
+def should_continue(state: MessagesState) -> str:
+    if not state["messages"][LAST].tool_calls:
+        return END
+    return ACT
+
+flow = StateGraph(MessagesState)
+
+flow.add_node(AGENT_REASON, run_agent_node)
+flow.set_entry_point(AGENT_REASON)
+flow.add_node(ACT, tool_node)
+flow.add_conditional_edges(AGENT_REASON, should_continue, {
+    END: END,
+    ACT: ACT
+})
+
+flow.add_edge(ACT,AGENT_REASON)
+app = flow.compile()
 
 if __name__ == "__main__":
-    print("Hello this is the agent")
-    result = (run_agent("what is the price of laptop with silver tier discount?"))
+    res = app.invoke([HumanMessage(content="What is the temperature in tokyo? list it and triple it and after that give me 3 pointers on Elon musk.")])
+
+    print(res["messages"][LAST].content)
+
