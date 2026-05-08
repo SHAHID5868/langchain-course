@@ -62,7 +62,7 @@ flow.add_node(AGENT_REASON, run_search_agent)
 flow.add_node(ACT, tool_node)
 flow.set_entry_point(AGENT_REASON)
 flow.add_conditional_edges(AGENT_REASON,should_continue,path_map={END:END, ACT:ACT})
-flow.add_edge(ACT, AGENT_REASON)
+ 
 
 app = flow.compile()
 

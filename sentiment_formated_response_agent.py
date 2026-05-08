@@ -25,9 +25,9 @@ def sentiment(rating: str) -> float:
 
     return score.get(rating, 0)
 
-tools = [TavilySearch(max_results=2, search_depth ="advanced"), sentiment]
+tools = [TavilySearch(max_results=2, search_depth ="basic"), sentiment]
 
-llm= init_chat_model(model="llama-3.3-70b-versatile", model_provider="groq", temperature=0, ).bind_tools(tools)
+llm= init_chat_model(model="gemini-2.0-flash", model_provider="google_genai", temperature=0, ).bind_tools(tools)
 
 SYSTEM_MESSAGE = """
    you are helping assistent the will take news from web and give it a rating according to the sentiment that is "positive", "negative" and "neutral"

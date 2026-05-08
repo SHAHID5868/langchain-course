@@ -60,7 +60,7 @@ flow.add_edge(ACT,AGENT_REASON)
 app = flow.compile()
 
 if __name__ == "__main__":
-    res = app.invoke([HumanMessage(content="What is the temperature in tokyo? list it and triple it and after that give me 3 pointers on Elon musk.")])
+    res = app.invoke({"messages":[HumanMessage(content="What is the temperature in tokyo? list it and triple it and after that give me 3 pointers on Elon musk.")]})
 
     print(res["messages"][LAST].content)
 
