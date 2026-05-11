@@ -1,7 +1,7 @@
 import datetime
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
-from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.output_parsers.openai_tools import JsonOutputKeyToolsParser, PydanticToolsParser
 from langchain_core.prompts import MessagesPlaceholder, ChatPromptTemplate
 from typing import List, Literal
@@ -38,9 +38,9 @@ class ReviseAnswer(AnswerQuestion):
         description="Citations motivating your updated answer."
     )
 
-llm = init_chat_model(model="llama-3.3-70b-versatile", model_provider="groq", temperature=0,model_kwargs={"tool_choice": "auto"} )
-parser = JsonOutputKeyToolsParser(key_name="AnswerQuestion",return_id=True)
-parser_pydantic = PydanticToolsParser(tools=[AnswerQuestion])
+llm = init_chat_model(model="gemini-2.5-flash", model_provider="google-genai", temperature=0,model_kwargs={"tool_choice": "auto"} )
+# parser = JsonOutputKeyToolsParser(key_name="AnswerQuestion",return_id=True)
+# parser_pydantic = PydanticToolsParser(tools=[AnswerQuestion])
 
 actor_prompt_template = ChatPromptTemplate(
     [
@@ -137,6 +137,10 @@ if __name__ == "__main__":
         ]
     })
     print(res["messages"][-1].content)
+
+    last_message = res["messages"][-1]
+    if isinstance(last_message, AIMessage) and last_message.tool_calls:
+        print(last_message.tool_calls[0]["args"]["answer"])
 
 
 # 1. app.invoke()
